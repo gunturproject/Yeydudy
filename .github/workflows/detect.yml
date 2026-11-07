@@ -1,0 +1,39 @@
+name: php2shell Detect
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'URL target (milik sendiri)'
+        required: true
+        default: 'https://smkssyaum.sch.id/user/index.php'
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install dependencies sistem
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-venv libcurl4-openssl-dev libssl-dev build-essential
+
+      - name: Clone php2shell & Setup
+        run: |
+          git clone https://github.com/aarsaputra/php2shell.git
+          cd php2shell
+          python3 -m venv .venv
+          source .venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run detect
+        run: |
+          cd php2shell
+          source .venv/bin/activate
+          python php2shell.py detect -u "${{ github.event.inputs.target }}" | tee detect-output.txt
+
+      - name: Run preflight
+        run: |
+          cd php2shell
+          source .venv/bin/activate
+          python php2shell.py preflight -u "${{ github.event.inputs.target }}" | tee preflight-output.txt
