@@ -1,0 +1,55 @@
+name: php2shell Detect
+
+on:
+  workflow_dispatch:        # jalankan manual dari tab Actions
+    inputs:
+      target:
+        description: 'URL target (milik sendiri)'
+        required: true
+        default: 'https://smkssyaum.sch.id/user/index.php'
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies sistem
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-venv libcurl4-openssl-dev libssl-dev build-essential
+
+      - name: Clone php2shell
+        run: |
+          git clone https://github.com/aarsaputra/php2shell.git
+          cd php2shell
+          python3 -m venv .venv
+          source .venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run detect
+        run: |
+          cd php2shell
+          source .venv/bin/activate
+          python php2shell.py detect -u "${{ github.event.inputs.target }}" | tee detect-output.txt
+
+      - name: Run preflight
+        run: |
+          cd php2shell
+          source .venv/bin/activate
+          python php2shell.py preflight -u "${{ github.event.inputs.target }}" | tee preflight-output.txt
+
+      - name: Upload hasil
+        uses: actions/upload-artifact@v4
+        with:
+          name: php2shell-results
+          path: |
+            php2shell/detect-output.txt
+            php2shell/preflight-output.txt
